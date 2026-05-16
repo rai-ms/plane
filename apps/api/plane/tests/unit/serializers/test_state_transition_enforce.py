@@ -57,7 +57,7 @@ class TestStateTransitionEndpointLogic:
         from plane.app.views.state.workflow import set_project_transitions
         p = ProjectFactory()
         a, b = _state(p, "Todo"), _state(p, "Done")
-        other = _state(ProjectFactory(), "X")
+        other = _state(ProjectFactory(workspace=p.workspace), "X")
         set_project_transitions(p.id, [(a.id, b.id)])
         assert StateTransition.objects.filter(project_id=p.id).count() == 1
         set_project_transitions(p.id, [])
