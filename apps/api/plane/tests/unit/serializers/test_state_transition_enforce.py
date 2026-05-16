@@ -2,6 +2,8 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 # See the LICENSE file for details.
 
+import uuid
+
 import pytest
 from rest_framework.exceptions import ValidationError
 
@@ -57,10 +59,9 @@ class TestStateTransitionEndpointLogic:
         from plane.app.views.state.workflow import set_project_transitions
         p = ProjectFactory()
         a, b = _state(p, "Todo"), _state(p, "Done")
-        other = _state(ProjectFactory(workspace=p.workspace), "X")
         set_project_transitions(p.id, [(a.id, b.id)])
         assert StateTransition.objects.filter(project_id=p.id).count() == 1
         set_project_transitions(p.id, [])
         assert StateTransition.objects.filter(project_id=p.id).count() == 0
         with pytest.raises(ValidationError):
-            set_project_transitions(p.id, [(a.id, other.id)])
+            set_project_transitions(p.id, [(a.id, uuid.uuid4())])
