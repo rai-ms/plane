@@ -1,0 +1,82 @@
+name: Genzit Plane Build (GHCR)
+
+# Builds the 6 customized Plane images for the Genzit self-host fork and
+# pushes them to GHCR. Uses the built-in GITHUB_TOKEN — no extra secrets.
+# Deploy tag: ":genzit" (moving) + ":sha-<sha>" (pinned, for rollback).
+
+on:
+  push:
+    branches: [genzit-custom]
+  workflow_dispatch:
+
+concurrency:
+  group: genzit-build-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: plane-frontend
+            context: .
+            file: ./apps/web/Dockerfile.web
+          - name: plane-admin
+            context: .
+            file: ./apps/admin/Dockerfile.admin
+          - name: plane-space
+            context: .
+            file: ./apps/space/Dockerfile.space
+          - name: plane-live
+            context: .
+            file: ./apps/live/Dockerfile.live
+          - name: plane-backend
+            context: ./apps/api
+            file: ./apps/api/Dockerfile.api
+          - name: plane-proxy
+            context: ./apps/proxy
+            file: ./apps/proxy/Dockerfile.ce
+    name: build ${{ matrix.name }}
+    steps:
+      - name: Free disk space (big monorepo builds)
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc \
+            /opt/hostedtoolcache/CodeQL "$AGENT_TOOLSDIRECTORY" || true
+          df -h / | tail -1
+
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Compute image ref (lowercase owner)
+        id: img
+        run: echo "ref=ghcr.io/$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')/${{ matrix.name }}" >> "$GITHUB_OUTPUT"
+
+      - name: Build & push ${{ matrix.name }}
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.file }}
+          platforms: linux/amd64
+          push: true
+          provenance: false
+          tags: |
+            ${{ steps.img.outputs.ref }}:genzit
+            ${{ steps.img.outputs.ref }}:sha-${{ github.sha }}
+          build-args: |
+            DOCKER_BUILDKIT=1
+          cache-from: type=gha,scope=${{ matrix.name }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.name }}
