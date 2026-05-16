@@ -1165,27 +1165,8 @@ class IssueBulkUpdateDateEndpoint(BaseAPIView):
                 issue.target_date = target_date
                 issues_to_update.append(issue)
 
-            new_state_id = update.get("state_id")
-            if new_state_id:
-                from plane.utils.state_workflow import validate_state_transition
-
-                validate_state_transition(
-                    project_id, issue.state_id, new_state_id
-                )
-                issue_activity.delay(
-                    type="issue.activity.updated",
-                    requested_data=json.dumps({"state": str(new_state_id)}),
-                    current_instance=json.dumps({"state": str(issue.state_id)}),
-                    issue_id=str(issue_id),
-                    actor_id=str(request.user.id),
-                    project_id=str(project_id),
-                    epoch=epoch,
-                )
-                issue.state_id = new_state_id
-                issues_to_update.append(issue)
-
         # Bulk update issues
-        Issue.objects.bulk_update(issues_to_update, ["start_date", "target_date", "state_id"])
+        Issue.objects.bulk_update(issues_to_update, ["start_date", "target_date"])
 
         return Response({"message": "Issues updated successfully"}, status=status.HTTP_200_OK)
 
