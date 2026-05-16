@@ -61,5 +61,26 @@ jobs:
       - name: Django system check (model/app sanity)
         run: cd apps/api && python manage.py check
 
+      - name: Generate StateTransition migration (no local env to do this)
+        run: |
+          cd apps/api
+          python manage.py makemigrations db --name statetransition
+          echo "----- GENERATED MIGRATIONS (uncommitted) -----"
+          git status --porcelain plane/db/migrations/ || true
+          for f in $(git ls-files --others --exclude-standard plane/db/migrations/); do
+            echo "===== FILE: $f ====="
+            cat "$f"
+          done
+
+      - name: Upload generated migration artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: generated-migrations
+          path: apps/api/plane/db/migrations/0*statetransition*.py
+          if-no-files-found: warn
+
+      - name: Verify migrations are consistent with models
+        run: cd apps/api && python manage.py makemigrations --check --dry-run
+
       - name: Run feature unit tests
         run: cd apps/api && pytest plane/tests/unit/utils plane/tests/unit/serializers -q
