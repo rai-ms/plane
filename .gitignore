@@ -121,3 +121,6 @@ packages/i18n/src/types/keys.generated.ts
 
 # local Plane handoff (infra/IP — never push to public fork)
 docs/GENZIT-PLANE-CUSTOMIZATION.md
+
+# git worktrees (local dev isolation)
+.worktrees/
