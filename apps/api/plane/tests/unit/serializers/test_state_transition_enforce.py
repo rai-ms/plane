@@ -1,3 +1,7 @@
+# Copyright (c) 2023-present Plane Software, Inc. and contributors
+# SPDX-License-Identifier: AGPL-3.0-only
+# See the LICENSE file for details.
+
 import pytest
 from rest_framework.exceptions import ValidationError
 
@@ -32,7 +36,7 @@ class TestIssueSerializerWorkflowEnforcement:
         )
         with pytest.raises(ValidationError) as exc:
             ser.is_valid(raise_exception=True)
-        assert "workflow" in str(exc.value)
+        assert exc.value.get_codes() == ["STATE_TRANSITION_NOT_ALLOWED"]
 
     def test_allowed_update_transition_ok(self):
         p = ProjectFactory()
