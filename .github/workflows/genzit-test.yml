@@ -1,0 +1,65 @@
+name: Genzit API Tests (status-workflow)
+
+# CI test harness for the per-project status-workflow feature branch.
+# Local Mac has no Python/Docker env, so tests run here on every push.
+
+on:
+  push:
+    branches: [feat/project-status-workflow-backend]
+  workflow_dispatch:
+
+concurrency:
+  group: genzit-test-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  api-tests:
+    name: API unit tests
+    runs-on: ubuntu-22.04
+    timeout-minutes: 25
+
+    services:
+      postgres:
+        image: postgres:15.7-alpine
+        env:
+          POSTGRES_DB: plane_test
+          POSTGRES_USER: plane
+          POSTGRES_PASSWORD: plane
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U plane"
+          --health-interval 10s --health-timeout 5s --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s --health-timeout 5s --health-retries 10
+
+    env:
+      POSTGRES_DB: plane_test
+      POSTGRES_USER: plane
+      POSTGRES_PASSWORD: plane
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: "5432"
+      REDIS_URL: redis://localhost:6379/
+      SECRET_KEY: ci-test-secret-key-not-for-prod
+      DJANGO_SETTINGS_MODULE: plane.settings.test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12.x"
+          cache: pip
+          cache-dependency-path: apps/api/requirements.txt
+
+      - name: Install API dependencies
+        run: cd apps/api && pip install -r requirements.txt
+
+      - name: Django system check (model/app sanity)
+        run: cd apps/api && python manage.py check
+
+      - name: Run feature unit tests
+        run: cd apps/api && pytest plane/tests/unit/utils plane/tests/unit/serializers -q
