@@ -86,8 +86,12 @@ jobs:
         run: |
           cd apps/api
           targets=""
-          [ -e plane/tests/unit/utils ] && targets="$targets plane/tests/unit/utils"
-          [ -e plane/tests/unit/serializers/test_state_transition_enforce.py ] && targets="$targets plane/tests/unit/serializers/test_state_transition_enforce.py"
+          if [ -e plane/tests/unit/utils ]; then
+            targets="$targets plane/tests/unit/utils"
+          fi
+          if [ -e plane/tests/unit/serializers/test_state_transition_enforce.py ]; then
+            targets="$targets plane/tests/unit/serializers/test_state_transition_enforce.py"
+          fi
           if [ -n "$targets" ]; then
             echo "Running:$targets"
             pytest $targets -q
