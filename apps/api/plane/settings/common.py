@@ -522,3 +522,6 @@ if ENABLE_DRF_SPECTACULAR:
 # MongoDB Settings
 MONGO_DB_URL = os.environ.get("MONGO_DB_URL", False)
 MONGO_DB_DATABASE = os.environ.get("MONGO_DB_DATABASE", False)
+
+# Use X-Forwarded-Host for get_host calls when behind proxy
+USE_X_FORWARDED_HOST = int(os.environ.get("USE_X_FORWARDED_HOST", 0)) == 1
