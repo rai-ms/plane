@@ -7,7 +7,7 @@ from rest_framework.response import Response
 
 from .. import BaseAPIView
 from plane.app.permissions import ROLE, allow_permission
-from plane.db.models import State, StateTransition
+from plane.db.models import Project, State, StateTransition
 
 
 def set_project_transitions(project_id, pairs):
@@ -28,11 +28,19 @@ def set_project_transitions(project_id, pairs):
             raise serializers.ValidationError(
                 "from_state/to_state must belong to this project"
             )
+    workspace_id = (
+        Project.objects.filter(id=project_id)
+        .values_list("workspace_id", flat=True)
+        .first()
+    )
     StateTransition.objects.filter(project_id=project_id).delete()
     StateTransition.objects.bulk_create(
         [
             StateTransition(
-                project_id=project_id, from_state_id=f, to_state_id=t
+                project_id=project_id,
+                workspace_id=workspace_id,
+                from_state_id=f,
+                to_state_id=t,
             )
             for f, t in pairs
         ]
