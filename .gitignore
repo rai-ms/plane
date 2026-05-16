@@ -118,3 +118,6 @@ packages/i18n/src/types/keys.generated.ts
 # local Plane VPS secrets — never commit
 .plane-vps.env
 *.plane.env
+
+# local Plane handoff (infra/IP — never push to public fork)
+docs/GENZIT-PLANE-CUSTOMIZATION.md
