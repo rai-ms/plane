@@ -49,3 +49,18 @@ class TestIssueSerializerWorkflowEnforcement:
             partial=True, context=self._ctx(p, u),
         )
         assert ser.is_valid(raise_exception=True) is True
+
+
+@pytest.mark.django_db
+class TestStateTransitionEndpointLogic:
+    def test_set_replaces_ruleset_and_rejects_cross_project(self):
+        from plane.app.views.state.workflow import set_project_transitions
+        p = ProjectFactory()
+        a, b = _state(p, "Todo"), _state(p, "Done")
+        other = _state(ProjectFactory(), "X")
+        set_project_transitions(p.id, [(a.id, b.id)])
+        assert StateTransition.objects.filter(project_id=p.id).count() == 1
+        set_project_transitions(p.id, [])
+        assert StateTransition.objects.filter(project_id=p.id).count() == 0
+        with pytest.raises(ValidationError):
+            set_project_transitions(p.id, [(a.id, other.id)])
