@@ -3,6 +3,7 @@
 # See the LICENSE file for details.
 
 from django.db import models
+from django.db.models import Q
 
 from .project import ProjectBaseModel
 
@@ -26,6 +27,13 @@ class StateTransition(ProjectBaseModel):
 
     class Meta:
         unique_together = ["project", "from_state", "to_state", "deleted_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["project", "from_state", "to_state"],
+                condition=Q(deleted_at__isnull=True),
+                name="statetransition_unique_project_from_to_when_deleted_at_null",
+            )
+        ]
         verbose_name = "State Transition"
         verbose_name_plural = "State Transitions"
         db_table = "state_transitions"
