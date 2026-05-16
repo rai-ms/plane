@@ -174,6 +174,17 @@ class IssueCreateSerializer(BaseSerializer):
         ):
             raise serializers.ValidationError("State is not valid please pass a valid state_id")
 
+        # Enforce per-project workflow on state changes (no rules => allowed)
+        if attrs.get("state"):
+            from plane.utils.state_workflow import validate_state_transition
+
+            old_state_id = self.instance.state_id if self.instance else None
+            validate_state_transition(
+                self.context.get("project_id"),
+                old_state_id,
+                attrs.get("state").id,
+            )
+
         # Check parent issue is from workspace as it can be cross workspace
         if (
             attrs.get("parent")
