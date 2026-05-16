@@ -36,7 +36,7 @@ class TestIssueSerializerWorkflowEnforcement:
         )
         with pytest.raises(ValidationError) as exc:
             ser.is_valid(raise_exception=True)
-        assert exc.value.get_codes() == ["STATE_TRANSITION_NOT_ALLOWED"]
+        assert exc.value.get_codes() == {"non_field_errors": ["STATE_TRANSITION_NOT_ALLOWED"]}
 
     def test_allowed_update_transition_ok(self):
         p = ProjectFactory()
