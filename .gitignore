@@ -114,3 +114,7 @@ scripts/
 
 # i18n auto-generated types (regenerated on every build)
 packages/i18n/src/types/keys.generated.ts
+
+# local Plane VPS secrets — never commit
+.plane-vps.env
+*.plane.env
