@@ -26,7 +26,7 @@ class TestIssueSerializerWorkflowEnforcement:
 
     def test_disallowed_update_transition_blocked(self):
         p = ProjectFactory()
-        u = UserFactory()
+        u = UserFactory(username="wf-user-disallowed")
         a, b = _state(p, "Todo"), _state(p, "Backlog")
         StateTransition.objects.create(project=p, from_state=a, to_state=_state(p, "Done"))
         issue = Issue.objects.create(project=p, name="x", state=a)
@@ -40,7 +40,7 @@ class TestIssueSerializerWorkflowEnforcement:
 
     def test_allowed_update_transition_ok(self):
         p = ProjectFactory()
-        u = UserFactory()
+        u = UserFactory(username="wf-user-allowed")
         a, b = _state(p, "Todo"), _state(p, "Done")
         StateTransition.objects.create(project=p, from_state=a, to_state=b)
         issue = Issue.objects.create(project=p, name="x", state=a)
