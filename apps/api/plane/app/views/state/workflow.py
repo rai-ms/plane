@@ -11,7 +11,12 @@ from plane.db.models import State, StateTransition
 
 
 def set_project_transitions(project_id, pairs):
-    """Replace a project's workflow with `pairs` of (from_id, to_id)."""
+    """Replace a project's workflow with `pairs` of (from_id, to_id).
+
+    State IDs are validated against all of the project's states (incl.
+    soft-deleted) on purpose, so a workflow can reference archived states;
+    runtime enforcement is what gates live transitions.
+    """
     valid_ids = set(
         str(i)
         for i in State.all_state_objects.filter(
@@ -46,10 +51,15 @@ class StateTransitionEndpoint(BaseAPIView):
 
     @allow_permission([ROLE.ADMIN])
     def put(self, request, slug, project_id):
-        pairs = [
-            (t["from_state_id"], t["to_state_id"])
-            for t in request.data.get("transitions", [])
-        ]
+        try:
+            pairs = [
+                (t["from_state_id"], t["to_state_id"])
+                for t in request.data.get("transitions", [])
+            ]
+        except (KeyError, TypeError):
+            raise serializers.ValidationError(
+                "transitions must be a list of {from_state_id, to_state_id} objects"
+            )
         set_project_transitions(project_id, pairs)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
