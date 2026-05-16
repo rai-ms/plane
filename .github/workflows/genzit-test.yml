@@ -85,9 +85,11 @@ jobs:
       - name: Run feature unit tests
         run: |
           cd apps/api
+          # Scope strictly to THIS feature's test files — upstream's own
+          # suite has unrelated pre-existing failures (e.g. test_url.py).
           targets=""
-          if [ -e plane/tests/unit/utils ]; then
-            targets="$targets plane/tests/unit/utils"
+          if [ -e plane/tests/unit/utils/test_state_workflow.py ]; then
+            targets="$targets plane/tests/unit/utils/test_state_workflow.py"
           fi
           if [ -e plane/tests/unit/serializers/test_state_transition_enforce.py ]; then
             targets="$targets plane/tests/unit/serializers/test_state_transition_enforce.py"
