@@ -13,13 +13,12 @@ from plane.db.models import Project, State, StateTransition
 def set_project_transitions(project_id, pairs):
     """Replace a project's workflow with `pairs` of (from_id, to_id).
 
-    State IDs are validated against all of the project's states (incl.
-    soft-deleted) on purpose, so a workflow can reference archived states;
-    runtime enforcement is what gates live transitions.
+    State IDs are validated against the project's live states (State.objects
+    excludes soft-deleted and triage), so rules cannot reference dead states.
     """
     valid_ids = set(
         str(i)
-        for i in State.all_state_objects.filter(
+        for i in State.objects.filter(
             project_id=project_id
         ).values_list("id", flat=True)
     )
@@ -33,7 +32,7 @@ def set_project_transitions(project_id, pairs):
         .values_list("workspace_id", flat=True)
         .first()
     )
-    StateTransition.objects.filter(project_id=project_id).delete()
+    StateTransition.objects.filter(project_id=project_id).delete(soft=False)
     StateTransition.objects.bulk_create(
         [
             StateTransition(
@@ -73,5 +72,5 @@ class StateTransitionEndpoint(BaseAPIView):
 
     @allow_permission([ROLE.ADMIN])
     def delete(self, request, slug, project_id):
-        StateTransition.objects.filter(project_id=project_id).delete()
+        StateTransition.objects.filter(project_id=project_id).delete(soft=False)
         return Response(status=status.HTTP_204_NO_CONTENT)
