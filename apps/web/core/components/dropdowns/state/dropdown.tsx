@@ -27,11 +27,18 @@ export const StateDropdown = observer(function StateDropdown(props: TWorkItemSta
   // states
   const [stateLoader, setStateLoader] = useState(false);
   // store hooks
-  const { fetchProjectStates, fetchStateTransitions, getAllowedToStateIds, getProjectStateIds, getStateById } =
-    useProjectState();
+  const {
+    fetchProjectStates,
+    fetchStateTransitions,
+    getAllowedToStateIds,
+    getProjectStateIds,
+    getStateById,
+    stateTransitionMap,
+  } = useProjectState();
   // derived values
   const stateIds = propsStateIds ?? getProjectStateIds(projectId);
-  const allowedStateIds = projectId ? getAllowedToStateIds(projectId, props.value) : undefined;
+  const allowedStateIds =
+    projectId && !props.isForWorkItemCreation ? getAllowedToStateIds(projectId, props.value) : undefined;
 
   // fetch states if not provided
   const onDropdownOpen = async () => {
@@ -40,7 +47,7 @@ export const StateDropdown = observer(function StateDropdown(props: TWorkItemSta
       await fetchProjectStates(workspaceSlug.toString(), projectId);
       setStateLoader(false);
     }
-    if (workspaceSlug && projectId) {
+    if (workspaceSlug && projectId && !(projectId in stateTransitionMap)) {
       await fetchStateTransitions(workspaceSlug.toString(), projectId).catch(() => {});
     }
   };

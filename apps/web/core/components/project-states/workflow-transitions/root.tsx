@@ -7,7 +7,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { observer } from "mobx-react";
 import type { IStateTransition } from "@plane/types";
+import { TOAST_TYPE, setToast } from "@plane/propel/toast";
 import { useProjectState } from "@/hooks/store/use-project-state";
+
+const key = (f: string, t: string) => `${f}->${t}`;
 
 type Props = { workspaceSlug: string; projectId: string };
 
@@ -16,8 +19,6 @@ export const WorkflowTransitions = observer(function WorkflowTransitions({ works
   const states = getProjectStates(projectId) ?? [];
   const [saving, setSaving] = useState(false);
   const [pairs, setPairs] = useState<Set<string>>(new Set());
-
-  const key = (f: string, t: string) => `${f}->${t}`;
 
   useEffect(() => {
     fetchStateTransitions(workspaceSlug, projectId).catch(() => {});
@@ -47,6 +48,8 @@ export const WorkflowTransitions = observer(function WorkflowTransitions({ works
         return { from_state_id, to_state_id };
       });
       await saveStateTransitions(workspaceSlug, projectId, transitions);
+    } catch {
+      setToast({ type: TOAST_TYPE.ERROR, title: "Error!", message: "Failed to save workflow. Please try again." });
     } finally {
       setSaving(false);
     }
@@ -62,13 +65,13 @@ export const WorkflowTransitions = observer(function WorkflowTransitions({ works
           type="button"
           onClick={onSave}
           disabled={saving}
-          className="rounded-sm bg-accent-primary px-3 py-1 text-xs text-white disabled:opacity-60"
+          className="text-xs rounded-sm bg-accent-primary px-3 py-1 text-white disabled:opacity-60"
         >
           {saving ? "Saving..." : "Save workflow"}
         </button>
       </div>
       {!hasRules && (
-        <p className="mt-2 text-xs text-tertiary">
+        <p className="text-xs mt-2 text-tertiary">
           No transitions selected — workflow is off (all status moves allowed).
         </p>
       )}

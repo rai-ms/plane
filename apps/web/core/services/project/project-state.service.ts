@@ -96,22 +96,10 @@ export class ProjectStateService extends APIService {
       });
   }
 
-  async setStateTransitions(
-    workspaceSlug: string,
-    projectId: string,
-    transitions: IStateTransition[]
-  ): Promise<void> {
+  async setStateTransitions(workspaceSlug: string, projectId: string, transitions: IStateTransition[]): Promise<void> {
     return this.put(`/api/workspaces/${workspaceSlug}/projects/${projectId}/state-transitions/`, {
       transitions,
     })
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response?.data;
-      });
-  }
-
-  async clearStateTransitions(workspaceSlug: string, projectId: string): Promise<void> {
-    return this.delete(`/api/workspaces/${workspaceSlug}/projects/${projectId}/state-transitions/`)
       .then((response) => response?.data)
       .catch((error) => {
         throw error?.response?.data;
