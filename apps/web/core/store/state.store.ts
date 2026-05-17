@@ -9,7 +9,7 @@ import { action, computed, makeObservable, observable, runInAction } from "mobx"
 import { computedFn } from "mobx-utils";
 // plane imports
 import { STATE_GROUPS } from "@plane/constants";
-import type { IIntakeState, IState } from "@plane/types";
+import type { IIntakeState, IState, IStateTransition } from "@plane/types";
 // helpers
 import { sortStates } from "@plane/utils";
 // plane web
@@ -23,6 +23,7 @@ export interface IStateStore {
   // observables
   stateMap: Record<string, IState>;
   intakeStateMap: Record<string, IIntakeState>;
+  stateTransitionMap: Record<string, IStateTransition[]>;
   // computed
   workspaceStates: IState[] | undefined;
   projectStates: IState[] | undefined;
@@ -57,11 +58,19 @@ export interface IStateStore {
   ) => Promise<void>;
 
   getStatePercentageInGroup: (stateId: string | null | undefined) => number | undefined;
+  fetchStateTransitions: (workspaceSlug: string, projectId: string) => Promise<IStateTransition[]>;
+  saveStateTransitions: (
+    workspaceSlug: string,
+    projectId: string,
+    transitions: IStateTransition[]
+  ) => Promise<void>;
+  getAllowedToStateIds: (projectId: string, fromStateId: string | null | undefined) => string[] | undefined;
 }
 
 export class StateStore implements IStateStore {
   stateMap: Record<string, IState> = {};
   intakeStateMap: Record<string, IIntakeState> = {};
+  stateTransitionMap: Record<string, IStateTransition[]> = {};
   //loaders
   fetchedMap: Record<string, boolean> = {};
   fetchedIntakeMap: Record<string, boolean> = {};
@@ -74,6 +83,7 @@ export class StateStore implements IStateStore {
       // observables
       stateMap: observable,
       intakeStateMap: observable,
+      stateTransitionMap: observable,
       fetchedMap: observable,
       fetchedIntakeMap: observable,
       // computed
@@ -82,6 +92,8 @@ export class StateStore implements IStateStore {
       // fetch action
       fetchProjectStates: action,
       fetchProjectIntakeState: action,
+      fetchStateTransitions: action,
+      saveStateTransitions: action,
       // CRUD actions
       createState: action,
       updateState: action,
@@ -364,6 +376,47 @@ export class StateStore implements IStateStore {
         this.stateMap = originalStates;
       });
     }
+  };
+
+  /**
+   * fetches the state transitions for a project and stores them in stateTransitionMap
+   * @param workspaceSlug
+   * @param projectId
+   * @returns
+   */
+  fetchStateTransitions = async (workspaceSlug: string, projectId: string) => {
+    const response = await this.stateService.getStateTransitions(workspaceSlug, projectId);
+    runInAction(() => {
+      set(this.stateTransitionMap, projectId, response ?? []);
+    });
+    return response;
+  };
+
+  /**
+   * saves state transitions for a project both via API and in the store
+   * @param workspaceSlug
+   * @param projectId
+   * @param transitions
+   */
+  saveStateTransitions = async (workspaceSlug: string, projectId: string, transitions: IStateTransition[]) => {
+    await this.stateService.setStateTransitions(workspaceSlug, projectId, transitions);
+    runInAction(() => {
+      set(this.stateTransitionMap, projectId, transitions);
+    });
+  };
+
+  /**
+   * Returns the allowed destination state ids from a given state within a project.
+   * Always includes the fromStateId itself. Returns undefined when no transition rules exist.
+   * @param projectId
+   * @param fromStateId
+   */
+  getAllowedToStateIds = (projectId: string, fromStateId: string | null | undefined) => {
+    const rules = this.stateTransitionMap[projectId];
+    if (!rules || rules.length === 0) return undefined;
+    if (!fromStateId) return undefined;
+    const allowed = rules.filter((r) => r.from_state_id === fromStateId).map((r) => r.to_state_id);
+    return Array.from(new Set([fromStateId, ...allowed]));
   };
 
   /**

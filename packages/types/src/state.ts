@@ -19,6 +19,11 @@ export interface IState {
   order: number;
 }
 
+export interface IStateTransition {
+  from_state_id: string;
+  to_state_id: string;
+}
+
 export interface IStateLite {
   color: string;
   group: TStateGroups;

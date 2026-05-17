@@ -6,7 +6,7 @@
 
 // services
 import { API_BASE_URL } from "@plane/constants";
-import type { IIntakeState, IState } from "@plane/types";
+import type { IIntakeState, IState, IStateTransition } from "@plane/types";
 import { APIService } from "@/services/api.service";
 // helpers
 // types
@@ -82,6 +82,24 @@ export class ProjectStateService extends APIService {
 
   async getWorkspaceStates(workspaceSlug: string): Promise<IState[]> {
     return this.get(`/api/workspaces/${workspaceSlug}/states/`)
+      .then((response) => response?.data)
+      .catch((error) => {
+        throw error?.response?.data;
+      });
+  }
+
+  async getStateTransitions(workspaceSlug: string, projectId: string): Promise<IStateTransition[]> {
+    return this.get(`/api/workspaces/${workspaceSlug}/projects/${projectId}/state-transitions/`)
+      .then((response) => response?.data)
+      .catch((error) => {
+        throw error?.response?.data;
+      });
+  }
+
+  async setStateTransitions(workspaceSlug: string, projectId: string, transitions: IStateTransition[]): Promise<void> {
+    return this.put(`/api/workspaces/${workspaceSlug}/projects/${projectId}/state-transitions/`, {
+      transitions,
+    })
       .then((response) => response?.data)
       .catch((error) => {
         throw error?.response?.data;
