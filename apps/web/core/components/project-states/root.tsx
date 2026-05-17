@@ -12,6 +12,7 @@ import { EUserPermissionsLevel } from "@plane/constants";
 import type { IState, TStateOperationsCallbacks } from "@plane/types";
 import { EUserProjectRoles } from "@plane/types";
 import { ProjectStateLoader, GroupList } from "@/components/project-states";
+import { WorkflowTransitions } from "./workflow-transitions";
 // hooks
 import { useProjectState } from "@/hooks/store/use-project-state";
 import { useUserPermissions } from "@/hooks/store/user";
@@ -67,11 +68,16 @@ export const ProjectStateRoot = observer(function ProjectStateRoot(props: TProje
   if (!groupedProjectStates) return <ProjectStateLoader />;
 
   return (
-    <GroupList
-      groupedStates={groupedProjectStates}
-      stateOperationsCallbacks={stateOperationsCallbacks}
-      isEditable={isEditable}
-      shouldTrackEvents
-    />
+    <>
+      <GroupList
+        groupedStates={groupedProjectStates}
+        stateOperationsCallbacks={stateOperationsCallbacks}
+        isEditable={isEditable}
+        shouldTrackEvents
+      />
+      {isEditable && workspaceSlug && projectId && (
+        <WorkflowTransitions workspaceSlug={String(workspaceSlug)} projectId={String(projectId)} />
+      )}
+    </>
   );
 });
