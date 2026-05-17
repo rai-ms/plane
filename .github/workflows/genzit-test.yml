@@ -1,0 +1,102 @@
+name: Genzit API Tests (status-workflow)
+
+# CI test harness for the per-project status-workflow feature branch.
+# Local Mac has no Python/Docker env, so tests run here on every push.
+
+on:
+  push:
+    branches: [feat/project-status-workflow-backend]
+  workflow_dispatch:
+
+concurrency:
+  group: genzit-test-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  api-tests:
+    name: API unit tests
+    runs-on: ubuntu-22.04
+    timeout-minutes: 25
+
+    services:
+      postgres:
+        image: postgres:15.7-alpine
+        env:
+          POSTGRES_DB: plane_test
+          POSTGRES_USER: plane
+          POSTGRES_PASSWORD: plane
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U plane"
+          --health-interval 10s --health-timeout 5s --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s --health-timeout 5s --health-retries 10
+
+    env:
+      POSTGRES_DB: plane_test
+      POSTGRES_USER: plane
+      POSTGRES_PASSWORD: plane
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: "5432"
+      REDIS_URL: redis://localhost:6379/
+      SECRET_KEY: ci-test-secret-key-not-for-prod
+      DJANGO_SETTINGS_MODULE: plane.settings.test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12.x"
+          cache: pip
+          cache-dependency-path: apps/api/requirements.txt
+
+      - name: Install API dependencies
+        run: cd apps/api && pip install -r requirements.txt -r requirements/test.txt
+
+      - name: Django system check (model/app sanity)
+        run: cd apps/api && python manage.py check
+
+      - name: Generate StateTransition migration (no local env to do this)
+        run: |
+          cd apps/api
+          python manage.py makemigrations db --name statetransition
+          echo "----- GENERATED MIGRATIONS (uncommitted) -----"
+          git status --porcelain plane/db/migrations/ || true
+          for f in $(git ls-files --others --exclude-standard plane/db/migrations/); do
+            echo "===== FILE: $f ====="
+            cat "$f"
+          done
+
+      - name: Upload generated migration artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: generated-migrations
+          path: apps/api/plane/db/migrations/0*statetransition*.py
+          if-no-files-found: warn
+
+      - name: Verify migrations are consistent with models
+        run: cd apps/api && python manage.py makemigrations --check --dry-run
+
+      - name: Run feature unit tests
+        run: |
+          cd apps/api
+          # Scope strictly to THIS feature's test files — upstream's own
+          # suite has unrelated pre-existing failures (e.g. test_url.py).
+          targets=""
+          if [ -e plane/tests/unit/utils/test_state_workflow.py ]; then
+            targets="$targets plane/tests/unit/utils/test_state_workflow.py"
+          fi
+          if [ -e plane/tests/unit/serializers/test_state_transition_enforce.py ]; then
+            targets="$targets plane/tests/unit/serializers/test_state_transition_enforce.py"
+          fi
+          if [ -n "$targets" ]; then
+            echo "Running:$targets"
+            pytest $targets -q
+          else
+            echo "No feature tests yet (Task 1/2) — skipping"
+          fi
